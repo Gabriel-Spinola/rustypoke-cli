@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 
 mod build;
 mod send;
+mod lib;
 
 const SEND_ABOUT: &str = "Send requests to a remote server";
 const BUILD_ABOUT: &str = "Insert specified JSON data into a predefined Request template `body`";
