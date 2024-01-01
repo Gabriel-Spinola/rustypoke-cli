@@ -1,27 +1,96 @@
-// LINK - https://docs.rs/http/latest/http/request/struct.Request.html#:~:text=use%20http%3A%3A%7BRequest%2C%20Response,let%20response%20%3D%20send(request.
+// TODO - Test
 
-use std::{fs, error::Error};
+use std::{fs, error::Error, collections::HashMap, time::Duration, str::FromStr};
 
-use crate::lib::request::Request;
+use reqwest::{RequestBuilder, Method, Url, header::{HeaderMap, HeaderValue, HeaderName}};
+use serde_json::Value;
 
-pub fn handle_send(files_path: &Vec<String>, write: bool) {
-  println!("{:?}, {}", files_path, write);
+use crate::cli_lib::request::ParsedRequest;
 
-  let data: Vec<Request> = 
+pub async fn handle_send(files_path: &Vec<String>, _write: bool) {
+  let requests: Vec<ParsedRequest> = 
     files_path
-    .iter()
-    .map(|file| match parse_file(file) {
-      Ok(data) => data,
-      Err(error) => panic!("FAILED AT FILES PARSING:\nERROR::{:?}", error)
-    }).collect()
+      .iter()
+      .map(|file| match parse_file(file) {
+        Ok(data) => data,
+        Err(error) => 
+          panic!("FAILED AT FILES PARSING:\nERROR::{:?}", error)
+      }).collect()
   ;
 
-  println!("{:?}", data)
+  for request in requests {
+    let response = match send_request(&request).await {
+      Ok(data) => data,
+      Err(error) => 
+        panic!("FAILED AT REQUEST SENDING:\nERROR::{:?}", error),
+    };
+
+    println!("{}", response);
+  }
 }
 
-fn parse_file(file_path: &String) -> Result<Request, Box<dyn Error>> {
+fn parse_file(file_path: &String) -> Result<ParsedRequest, Box<dyn Error>> {
   let file_string = fs::read_to_string(file_path)?;
-  let data: Request = serde_json::from_str(&file_string)?;
+  let data: ParsedRequest = serde_json::from_str(&file_string)?;
 
   return Ok(data)
+}
+
+async fn send_request(request: &ParsedRequest) -> Result<String, Box<dyn Error>> {
+  let response = build_request(request)
+    ?.send()
+    .await?
+    .json::<HashMap<String, Value>>()
+    .await?
+  ;
+
+  let serialized_resp = serde_json::to_string(&response)?;
+
+  return Ok(serialized_resp);
+}
+
+fn build_request(request: &ParsedRequest) -> Result<RequestBuilder, Box<dyn Error>> {
+  let client = reqwest::Client::new();
+
+  let method = match request.method.to_uppercase().as_str() {
+    "GET" => Method::GET,
+    "POST" => Method::POST,
+    "PUT" => Method::PUT,
+    "PATCH" => Method::PATCH,
+    "DELETE" => Method::DELETE,
+    "HEADER" => Method::HEAD,
+    "OPTIONS" => Method::OPTIONS,
+    _ => panic!("Invalid Method"),
+  };
+
+  let url = Url::parse(&request.url)?;
+
+  let mut req = client.request(method, url);
+
+  if let Some(timeout) = request.timeout {
+    req = req.timeout(Duration::from_millis(timeout.into()));
+  }
+
+  if let Some(body) = &request.body {
+    let string_body = serde_json::to_string(body)?;
+    req = req.body(string_body);
+  }
+
+  if let Some(headers) = &request.headers {
+    let header_map: Result<HeaderMap, Box<dyn Error>> = 
+      headers
+        .iter()
+        .map(|(key, val)| {
+          let header_val = HeaderValue::from_str(&val)?;
+          let header_key = HeaderName::from_str(&key)?;
+
+          Ok((header_key, header_val))
+        })
+        .collect()
+    ;
+
+    req = req.headers(header_map?);
+  }
+
+  return Ok(req);
 }
