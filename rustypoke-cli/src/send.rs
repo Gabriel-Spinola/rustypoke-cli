@@ -1,11 +1,9 @@
-// TODO - Test
-
-use std::{fs, error::Error, collections::HashMap, time::{Duration, Instant}, str::FromStr};
+use std::{error::Error, collections::HashMap, time::{Duration, Instant}, str::FromStr};
 
 use reqwest::{RequestBuilder, Method, Url, header::{HeaderMap, HeaderValue, HeaderName}};
 use serde_json::Value;
 
-use crate::cli_lib::request::ParsedRequest;
+use crate::cli_lib::{request::ParsedRequest, parse_file};
 
 pub async fn handle_send(files_path: &Vec<String>, _write: bool) {
   let start = Instant::now();
@@ -29,15 +27,8 @@ pub async fn handle_send(files_path: &Vec<String>, _write: bool) {
 
     println!("{}", response);
   }
-  
+
   println!("TOOK: {:?}", start.elapsed());
-}
-
-fn parse_file(file_path: &String) -> Result<ParsedRequest, Box<dyn Error>> {
-  let file_string = fs::read_to_string(file_path)?;
-  let data: ParsedRequest = serde_json::from_str(&file_string)?;
-
-  return Ok(data)
 }
 
 async fn send_request(request: &ParsedRequest) -> Result<String, Box<dyn Error>> {

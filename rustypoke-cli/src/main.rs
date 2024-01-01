@@ -35,8 +35,9 @@ struct Arguments {
   net: NetCommands,
 }
 
+// TODO - Test, Concurrency
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let args = Arguments::parse();
 
   match args.net {
