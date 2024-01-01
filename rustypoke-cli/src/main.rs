@@ -42,7 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   match args.net {
     NetCommands::Build { files_path, output_path } => 
-      build::handle_build(&files_path, &output_path),
+      build::handle_build(&files_path, &output_path.unwrap_or("build_output.json".to_string())),
       
     NetCommands::Send { files_path, write } => 
       send::handle_send(&files_path, write).await,
