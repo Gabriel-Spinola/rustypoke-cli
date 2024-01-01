@@ -1,3 +1,21 @@
-pub fn handle_build(file_path: &Vec<String>, output_path: &Option<String>) {
-  println!("{:?}, {}", file_path, output_path.as_deref().unwrap_or("Output's not defined"))
+use std::time::Instant;
+
+use serde_json::Value;
+
+use crate::cli_lib::parse_file;
+
+pub fn handle_build(files_path: &Vec<String>, output_path: &Option<String>) {
+  let start = Instant::now();
+    
+  let requests: Value = 
+    files_path
+      .iter()
+      .map(|file| match parse_file(file) {
+        Ok(data) => data,
+        Err(error) => 
+          panic!("FAILED AT FILES PARSING:\nERROR::{:?}", error)
+      }).collect()
+  ;
+
+  println!("TOOK: {:?}", start.elapsed());
 }

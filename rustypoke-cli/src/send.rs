@@ -55,7 +55,7 @@ fn build_request(request: &ParsedRequest) -> Result<RequestBuilder, Box<dyn Erro
     "DELETE" => Method::DELETE,
     "HEADER" => Method::HEAD,
     "OPTIONS" => Method::OPTIONS,
-    _ => panic!("Invalid Method"),
+    _ => panic!("Invalid Method: `{}`", request.method),
   };
 
   let url = Url::parse(&request.url)?;
